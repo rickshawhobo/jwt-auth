@@ -107,7 +107,10 @@ class Blacklist
      */
     public function addForever(Payload $payload)
     {
-        $this->storage->forever($this->getKey($payload), 'forever');
+        $this->storage->forever(
+            $this->getKey($payload),
+            ['life' => 'forever', 'valid_until' => $this->getGraceTimestamp()]
+        );
 
         return true;
     }
@@ -123,8 +126,12 @@ class Blacklist
     {
         $val = $this->storage->get($this->getKey($payload));
 
+        if ($val !== null && isset($val['valid_until']) && Utils::isFuture($val['valid_until'])) {
+            return false;
+        }
+        
         // exit early if the token was blacklisted forever,
-        if ($val === 'forever') {
+        if (isset($val['life']) && $val['life'] === 'forever') {
             return true;
         }
 
